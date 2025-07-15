@@ -1,0 +1,104 @@
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('vazirmatn.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Vazirmatn', sans-serif;
+    width: 350px;
+    margin: 0;
+    padding: 10px;
+    background-image: url('background.jpg');
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.container {
+    background-color: rgba(0, 0, 0, 0.55);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.header h2 {
+    font-size: 16px;
+    margin: 0 0 10px 0;
+    text-align: center;
+    font-weight: 500;
+}
+
+.price-section {
+    display: grid;
+    grid-template-columns: 1fr; /* تک ستونه برای خوانایی بهتر */
+    gap: 10px;
+    min-height: 50px;
+}
+
+.price-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeIn 0.5s forwards;
+}
+
+.price-item .name {
+    font-size: 14px;
+}
+
+.price-item .price {
+    font-size: 15px;
+    font-weight: bold;
+    direction: ltr;
+}
+
+.separator {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
+    margin: 20px 0;
+}
+
+footer {
+    text-align: center;
+    font-size: 9px;
+    color: #ccc;
+    margin-top: 15px;
+    text-shadow: none;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* انیمیشن لودر */
+.loader {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #FFF;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    margin: 15px auto;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
