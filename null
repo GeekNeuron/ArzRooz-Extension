@@ -1,5 +1,6 @@
-# PowerShell Combiner Script
-# A robust alternative to the batch file for combining HTML, CSS, and JS.
+
+# PowerShell Combiner Script (Version 3 - Final with Auto-Formatting)
+# Combines HTML/CSS/JS and optionally formats the output with Prettier.
 
 param (
     [Parameter(Mandatory=$true, Position=0)]
@@ -23,15 +24,12 @@ $cssContent  = New-Object System.Text.StringBuilder
 $jsContent   = New-Object System.Text.StringBuilder
 $writingMode = "html"
 
-# Read the file line by line
 Get-Content $InputFile | ForEach-Object {
     $line = $_
-
     if ($line -match "<style") { $writingMode = "css"; return }
     if ($line -match "</style>") { $writingMode = "html"; return }
     if ($line -match "<script") { $writingMode = "js"; return }
     if ($line -match "</script>") { $writingMode = "html"; return }
-
     switch ($writingMode) {
         "html" { [void]$htmlContent.AppendLine($line) }
         "css"  { [void]$cssContent.AppendLine($line) }
@@ -42,7 +40,6 @@ Get-Content $InputFile | ForEach-Object {
 # --- Part 2: Rebuild the file ---
 Write-Host "Step 2: Building the final HTML file..."
 $outputFile = Join-Path (Split-Path $InputFile) "output.html"
-
 $finalHtml = @"
 <!DOCTYPE html>
 <html lang="en">
@@ -62,10 +59,23 @@ $($jsContent.ToString())
 </body>
 </html>
 "@
-
 $finalHtml | Set-Content -Path $outputFile -Encoding UTF8
+Write-Host "File built successfully: $outputFile" -ForegroundColor Cyan
 
-Write-Host "File built successfully: $outputFile" -ForegroundColor Green
+# --- Part 3 (Optional): Format with Prettier ---
+Write-Host "Step 3: Checking for Prettier code formatter..."
+$prettier = Get-Command prettier -ErrorAction SilentlyContinue
+if ($prettier) {
+    Write-Host "Prettier found! Formatting the output file..." -ForegroundColor Yellow
+    prettier --write $outputFile
+    Write-Host "Formatting complete." -ForegroundColor Yellow
+}
+else {
+    Write-Host "NOTE: Prettier is not installed. The output file is not formatted."
+    Write-Host "To enable auto-formatting, install Node.js and then run this command:"
+    Write-Host "  npm install --global prettier"
+}
+
 Write-Host "================================================"
-Write-Host "Operation finished. Press any key to exit..."
+Write-Host "Operation finished. Press any key to exit..." -ForegroundColor Green
 pause
