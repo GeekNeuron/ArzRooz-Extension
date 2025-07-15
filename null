@@ -1,10 +1,141 @@
-C:\Windows\system32>cd C:\Users\Vatan\Desktop\0000
+@echo off
+setlocal enabledelayedexpansion
 
-C:\Users\Vatan\Desktop\0000>combiner.bat "C:\Users\Vatan\Desktop\0000\index.html"
+:: --------------------------------------------------------------------------------
+:: Combiner.bat (Version 2 - More Robust)
+::
+:: This version uses a more robust method for reading the input file to avoid
+:: errors caused by special characters within the file's content.
+:: --------------------------------------------------------------------------------
 
- Processing file: index.html
- ================================================
- Step 1: Separating HTML, CSS, and JavaScript content...
-) was unexpected at this time.
+if "%~1"=="" (
+    echo.
+    echo  ERROR: No input file.
+    echo  Please drag and drop a file onto this script to process it.
+    echo.
+    pause
+    exit /b
+)
 
-C:\Users\Vatan\Desktop\0000>
+set "inputFile=%~1"
+set "baseDir=%~dp0"
+
+set "outputFile=%baseDir%output.html"
+set "tempHtmlFile=%baseDir%_temp_body.html"
+set "tempCssFile=%baseDir%_temp_styles.css"
+set "tempJsFile=%baseDir%_temp_script.js"
+
+del "%outputFile%" "%tempHtmlFile%" "%tempCssFile%" "%tempJsFile%" 2>nul
+
+echo.
+echo  Processing file: %~nx1
+echo  ================================================
+
+echo  Step 1: Separating HTML, CSS, and JavaScript content...
+
+set "writing_mode=html"
+:: CORRECTED LINE: Using "usebackq" for more robust file reading.
+for /f "usebackq delims=" %%L in ("%inputFile%") do (
+    set "line=%%L"
+
+    echo !line! | findstr /i /c:"<style" >nul
+    if !errorlevel! == 0 (
+        set "writing_mode=css"
+        goto :nextLine
+    )
+
+    echo !line! | findstr /i /c:"</style>" >nul
+    if !errorlevel! == 0 (
+        set "writing_mode=html"
+        goto :nextLine
+    )
+
+    echo !line! | findstr /i /c:"<script" >nul
+    if !errorlevel! == 0 (
+        set "writing_mode=js"
+        goto :nextLine
+    )
+
+    echo !line! | findstr /i /c:"</script>" >nul
+    if !errorlevel! == 0 (
+        set "writing_mode=html"
+        goto :nextLine
+    )
+
+    if !writing_mode! == html (
+        echo !line!>> "%tempHtmlFile%"
+    )
+    if !writing_mode! == css (
+        echo !line!>> "%tempCssFile%"
+    )
+    if !writing_mode! == js (
+        echo !line!>> "%tempJsFile%"
+    )
+
+    :nextLine
+)
+echo  Separation complete.
+
+echo  Step 2: Building the final standard HTML file...
+
+(
+    echo ^<!DOCTYPE html^>
+    echo ^<html lang="en"^>
+    echo ^<head^>
+    echo   ^<meta charset="UTF-8"^>
+    echo   ^<meta name="viewport" content="width=device-width, initial-scale=1.0"^>
+    echo   ^<title^>Combined Output^</title^>
+    echo   ^<style^>
+) > "%outputFile%"
+
+if exist "%tempCssFile%" (
+    type "%tempCssFile%" >> "%outputFile%"
+)
+
+(
+    echo   ^</style^>
+    echo ^</head^>
+    echo ^<body^>
+) >> "%outputFile%"
+
+if exist "%tempHtmlFile%" (
+    type "%tempHtmlFile%" >> "%outputFile%"
+)
+
+(
+    echo   ^<script defer^>
+) >> "%outputFile%"
+
+if exist "%tempJsFile%" (
+    type "%tempJsFile%" >> "%outputFile%"
+)
+
+(
+    echo   ^</script^>
+    echo ^</body^>
+    echo ^</html^>
+) >> "%outputFile%"
+
+echo  File built successfully: %outputFile%
+
+del "%tempHtmlFile%" "%tempCssFile%" "%tempJsFile%" 2>nul
+
+echo.
+echo  Checking for Prettier code formatter...
+prettier --version >nul 2>nul
+if %errorlevel! == 0 (
+    echo  Prettier found! Formatting the output file...
+    prettier --write "%outputFile%"
+    echo  Formatting complete.
+) else (
+    echo.
+    echo  NOTE: Prettier is not installed. The output file is not formatted.
+    echo  To enable auto-formatting, install Node.js and then run this command:
+    echo    npm install --global prettier
+    echo.
+)
+
+echo  ================================================
+echo  Operation finished.
+echo.
+pause
