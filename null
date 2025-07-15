@@ -1,81 +1,87 @@
-
-# PowerShell Combiner Script (Version 3 - Final with Auto-Formatting)
-# Combines HTML/CSS/JS and optionally formats the output with Prettier.
+# PowerShell Separator Script (v4 - Robust Separation Logic)
+# This script correctly separates a large file into index.html, style.css, and script.js,
+# and links them together. It uses robust regex for parsing.
 
 param (
     [Parameter(Mandatory=$true, Position=0)]
     [string]$InputFile
 )
 
-# Check if the input file exists
 if (-not (Test-Path $InputFile)) {
     Write-Error "Error: Input file not found at '$InputFile'"
     pause
     exit
 }
 
+$outputFolder = Split-Path $InputFile
+$outputHtmlFile = Join-Path $outputFolder "index.html"
+$outputCssFile  = Join-Path $outputFolder "style.css"
+$outputJsFile   = Join-Path $outputFolder "script.js"
+
 Write-Host "Processing file: $(Split-Path $InputFile -Leaf)" -ForegroundColor Green
+Write-Host "Output will be saved to: $outputFolder" -ForegroundColor Cyan
 Write-Host "================================================"
 
-# --- Part 1: Separate content ---
-Write-Host "Step 1: Separating content..."
-$htmlContent = New-Object System.Text.StringBuilder
-$cssContent  = New-Object System.Text.StringBuilder
-$jsContent   = New-Object System.Text.StringBuilder
-$writingMode = "html"
+# --- Part 1: Read the entire file content at once ---
+Write-Host "Step 1: Reading file content..."
+$fileContent = Get-Content $InputFile -Raw -Encoding UTF8
 
-Get-Content $InputFile | ForEach-Object {
-    $line = $_
-    if ($line -match "<style") { $writingMode = "css"; return }
-    if ($line -match "</style>") { $writingMode = "html"; return }
-    if ($line -match "<script") { $writingMode = "js"; return }
-    if ($line -match "</script>") { $writingMode = "html"; return }
-    switch ($writingMode) {
-        "html" { [void]$htmlContent.AppendLine($line) }
-        "css"  { [void]$cssContent.AppendLine($line) }
-        "js"   { [void]$jsContent.AppendLine($line) }
-    }
+# --- Part 2: Extract CSS and JS using robust Regex ---
+Write-Host "Step 2: Extracting CSS and JavaScript blocks..."
+
+# Regex to find content inside <style> tags
+$cssPattern = '(?s)(?<=<style.*?>).*(?=<\/style>)'
+$cssContent = ([regex]::Match($fileContent, $cssPattern)).Value.Trim()
+
+# Regex to find content inside <script> tags that are not external (don't have src="")
+$jsPattern = '(?s)(?<=<script(?![^>]*src=)[^>]*>).*(?=<\/script>)'
+$jsContent = ([regex]::Match($fileContent, $jsPattern)).Value.Trim()
+
+# --- Part 3: Create the separate CSS and JS files ---
+Write-Host "Step 3: Creating style.css and script.js..."
+if ($cssContent) {
+    Set-Content -Path $outputCssFile -Value $cssContent -Encoding UTF8
+    Write-Host " - Successfully created style.css" -ForegroundColor Yellow
+} else {
+    Write-Host " - No CSS content found to create style.css" -ForegroundColor Gray
 }
 
-# --- Part 2: Rebuild the file ---
-Write-Host "Step 2: Building the final HTML file..."
-$outputFile = Join-Path (Split-Path $InputFile) "output.html"
-$finalHtml = @"
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Combined Output</title>
-  <style>
-$($cssContent.ToString())
-  </style>
-</head>
-<body>
-$($htmlContent.ToString())
-  <script defer>
-$($jsContent.ToString())
-  </script>
-</body>
-</html>
-"@
-$finalHtml | Set-Content -Path $outputFile -Encoding UTF8
-Write-Host "File built successfully: $outputFile" -ForegroundColor Cyan
+if ($jsContent) {
+    Set-Content -Path $outputJsFile -Value $jsContent -Encoding UTF8
+    Write-Host " - Successfully created script.js" -ForegroundColor Yellow
+} else {
+    Write-Host " - No internal JavaScript content found to create script.js" -ForegroundColor Gray
+}
 
-# --- Part 3 (Optional): Format with Prettier ---
-Write-Host "Step 3: Checking for Prettier code formatter..."
+
+# --- Part 4: Create the final HTML file ---
+Write-Host "Step 4: Creating clean and linked index.html..."
+
+# Remove original style and script blocks from the HTML
+$cleanHtml = $fileContent -replace '(?s)<style.*?>.*?</style>', ''
+$cleanHtml = $cleanHtml -replace '(?s)<script(?![^>]*src=)[^>]*>.*?</script>', ''
+
+# Inject the link to style.css before the </head> tag
+$finalHtml = $cleanHtml -replace '(?i)(</head>)', "    <link rel=`"stylesheet`" href=`"style.css`">`r`n`$1"
+
+# Inject the link to script.js before the </body> tag
+$finalHtml = $finalHtml -replace '(?i)(</body>)', "    <script src=`"script.js`" defer></script>`r`n`$1"
+
+Set-Content -Path $outputHtmlFile -Value $finalHtml -Encoding UTF8
+Write-Host " - Successfully created and linked index.html" -ForegroundColor Yellow
+
+# --- Part 5 (Optional): Format all output files with Prettier ---
+Write-Host "Step 5: Checking for Prettier code formatter..."
 $prettier = Get-Command prettier -ErrorAction SilentlyContinue
 if ($prettier) {
-    Write-Host "Prettier found! Formatting the output file..." -ForegroundColor Yellow
-    prettier --write $outputFile
-    Write-Host "Formatting complete." -ForegroundColor Yellow
+    Write-Host "Prettier found! Formatting all output files..." -ForegroundColor Magenta
+    prettier --write $outputHtmlFile, $outputCssFile, $outputJsFile --no-error-on-unmatched-pattern
+    Write-Host "Formatting complete." -ForegroundColor Magenta
 }
 else {
-    Write-Host "NOTE: Prettier is not installed. The output file is not formatted."
-    Write-Host "To enable auto-formatting, install Node.js and then run this command:"
-    Write-Host "  npm install --global prettier"
+    Write-Host "NOTE: Prettier is not installed for automatic code formatting."
 }
 
 Write-Host "================================================"
-Write-Host "Operation finished. Press any key to exit..." -ForegroundColor Green
+Write-Host "Operation finished successfully." -ForegroundColor Green
 pause
