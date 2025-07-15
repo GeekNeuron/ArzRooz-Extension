@@ -1,4 +1,10 @@
+C:\Windows\system32>cd C:\Users\Vatan\Desktop\0000
+
+C:\Users\Vatan\Desktop\0000>combiner.bat "C:\Users\Vatan\Desktop\0000\index.html"
+
  Processing file: index.html
  ================================================
  Step 1: Separating HTML, CSS, and JavaScript content...
 ) was unexpected at this time.
+
+C:\Users\Vatan\Desktop\0000>
